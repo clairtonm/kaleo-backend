@@ -1,8 +1,20 @@
+
+import uvicorn
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 
 from kaleo_backend.entities.user_login import UserLogin
+from kaleo_backend.infra.db.postgres_adapter import PostgresAdapter
+from kaleo_backend.services.config import Config
+
+
+async def lifespan(app: FastAPI):
+    config = Config()
+    db = PostgresAdapter(config.database_url)
+    db.connect()
+    app.state.db = db
+    app.state.config = config
+    yield
 
 app = FastAPI(title="Kaleo Backend")
 
