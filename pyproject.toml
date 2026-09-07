@@ -1,0 +1,22 @@
+[project]
+name = "kaleo-backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Claiton Menezes", email = "clairton.menezes@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.141.1",
+    "pydantic>=2.13.5",
+    "ruff>=0.16.6",
+    "uvicorn>=0.52.4",
+]
+
+[project.scripts]
+kaleo-backend = "kaleo_backend.main:main"
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
