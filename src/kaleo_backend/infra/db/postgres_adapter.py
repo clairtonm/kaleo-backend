@@ -1,7 +1,7 @@
 from typing import Any
 
 from psycopg.rows import dict_row
-from psycopg_pool import ConnectionPool
+from psycopg_pool import AsyncConnectionPool
 
 from kaleo_backend.infra.db.database_port import DatabasePort
 
@@ -9,25 +9,30 @@ from kaleo_backend.infra.db.database_port import DatabasePort
 class PostgresAdapter(DatabasePort):
     def __init__(self, database_url: str) -> None:
         self.database_url = database_url
-        self._connection = None
+        self._pool: AsyncConnectionPool | None = None
 
-    def connect(self) -> None:
-        pool = ConnectionPool(
+    async def connect(self) -> None:
+        self._pool = AsyncConnectionPool(
             conninfo=self.database_url,
             min_size=2,
             max_size=10,
-            kwargs={"row_factory": dict_row}
+            kwargs={"row_factory": dict_row},
+            open=False,
         )
+        await self._pool.open()
 
-        with pool.connection() as conn:
-            self._connection = conn
+    async def disconnect(self) -> None:
+        if self._pool:
+            await self._pool.close()
+            self._pool = None
 
-    def query(self, sql: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
-        with self._connection.cursor() as cursor:
-            cursor.execute(sql, params)
-            return cursor.fetchall()
+    async def query(self, sql: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
+        assert self._pool, "Database not connected"
+        async with self._pool.connection() as conn, conn.cursor() as cursor:
+            await cursor.execute(sql, params)
+            return await cursor.fetchall()
 
-    def insert_many(self, sql: str, params: list[tuple[Any, ...]]) -> None:
-        with self._connection.cursor() as cursor:
-            cursor.executemany(sql, params)
-            self._connection.commit()
+    async def insert_many(self, sql: str, params: list[tuple[Any, ...]]) -> None:
+        assert self._pool, "Database not connected"
+        async with self._pool.connection() as conn, conn.cursor() as cursor:
+            await cursor.executemany(sql, params)

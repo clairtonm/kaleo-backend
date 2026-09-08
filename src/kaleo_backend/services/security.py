@@ -3,9 +3,12 @@ from datetime import datetime, timedelta
 import jwt
 from pwdlib import PasswordHash
 
-password_hash = PasswordHash.recommended()
+from kaleo_backend.services.config import get_config
 
-SECRET_KEY = ""
+password_hash = PasswordHash.recommended()
+config = get_config()
+
+SECRET_KEY = config.secret_key
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 3600
 

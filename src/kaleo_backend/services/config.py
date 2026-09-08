@@ -1,4 +1,6 @@
 
+from functools import lru_cache
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,3 +9,8 @@ class Config(BaseSettings):
 
     database_url: str
     secret_key: str
+
+
+@lru_cache
+def get_config() -> Config:
+    return Config()

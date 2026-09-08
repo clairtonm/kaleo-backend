@@ -3,20 +3,28 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from kaleo_backend.entities.user_login import UserLogin
+from kaleo_backend.entities.user import User, UserLogin
 from kaleo_backend.infra.db.postgres_adapter import PostgresAdapter
-from kaleo_backend.services.config import Config
+from kaleo_backend.repositories.user_repository import UserRepository
+from kaleo_backend.services.config import get_config
+from kaleo_backend.usecases.users.create_users import CreateUser
+from kaleo_backend.usecases.users.user_password import DefinePassword
 
 
 async def lifespan(app: FastAPI):
-    config = Config()
+    config = get_config()
     db = PostgresAdapter(config.database_url)
-    db.connect()
+    await db.connect()
     app.state.db = db
     app.state.config = config
+    user_repository = UserRepository(db)
+    app.state.user_repository = user_repository
+
     yield
 
-app = FastAPI(title="Kaleo Backend")
+    await db.disconnect()
+
+app = FastAPI(title="Kaleo Backend", lifespan=lifespan)
 
 origins = [
     "http://localhost:5173",
@@ -47,6 +55,21 @@ async def login(credentials: UserLogin):
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid username or password",
     )
+
+@app.post("/users", status_code=status.HTTP_200_OK)
+async def create_user(user: User):
+    user_repository = app.state.user_repository
+    create_user_usecase = CreateUser(user_repository)
+    await create_user_usecase.execute(user)
+    return {"message": "User created successfully"}
+
+@app.put("/users/{user_id}/password", status_code=status.HTTP_200_OK)
+async def define_password(user_id: str, password: str):
+    user_repository = app.state.user_repository
+    update_password_usecase = DefinePassword(user_repository)
+    await update_password_usecase.execute(user_id, password)
+    return {"message": "Password updated successfully"}
+
 
 def main():
     uvicorn.run("kaleo_backend.main:app", host="0.0.0.0", port=8000, reload=True)

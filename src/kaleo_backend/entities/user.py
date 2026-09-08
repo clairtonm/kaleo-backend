@@ -1,6 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
-
-from kaleo_backend.services.security import hash_password
+from pydantic import BaseModel, EmailStr, Field, PrivateAttr
 
 
 class User(BaseModel):
@@ -8,7 +6,8 @@ class User(BaseModel):
     last_name: str = Field(...)
     email: EmailStr = Field(...)
     account_type: str = Field(examples=['admin', 'professor', 'student'])
-    hashed_password: str = Field(...)
+    _hashed_password: str | None = PrivateAttr(default=None)
 
-    def create_hashed_password(self):
-        self.hashed_password = hash_password(self.hashed_password)
+class UserLogin(BaseModel):
+    username: str
+    password: str
